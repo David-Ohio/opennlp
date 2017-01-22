@@ -28,10 +28,10 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import morfologik.stemming.DictionaryMetadata;
-
 import opennlp.tools.dictionary.Dictionary;
 import opennlp.tools.postag.POSTaggerFactory;
 import opennlp.tools.postag.TagDictionary;
+import opennlp.tools.util.InvalidFormatException;
 import opennlp.tools.util.model.ArtifactSerializer;
 import opennlp.tools.util.model.ModelUtil;
 
@@ -52,25 +52,27 @@ public class MorfologikPOSTaggerFactory extends POSTaggerFactory {
 
   public MorfologikPOSTaggerFactory() {
   }
-
-  public TagDictionary createTagDictionary(File dictionary) throws IOException {
-
-    if (!dictionary.canRead()) {
+  
+  public TagDictionary createTagDictionary(File dictionary)
+      throws InvalidFormatException, FileNotFoundException, IOException {
+    
+    if(!dictionary.canRead()) {
       throw new FileNotFoundException("Could not read dictionary: " + dictionary.getAbsolutePath());
     }
-
+    
     Path dictionaryMeta = DictionaryMetadata.getExpectedMetadataLocation(dictionary.toPath());
-
-    if (dictionaryMeta == null || !dictionaryMeta.toFile().canRead()) {
+    
+    if(dictionaryMeta == null || !dictionaryMeta.toFile().canRead()) {
       throw new FileNotFoundException("Could not read dictionary metadata: " + dictionaryMeta.getFileName());
     }
-
+    
     this.dictData = Files.readAllBytes(dictionary.toPath());
     this.dictInfo = Files.readAllBytes(dictionaryMeta);
-
+    
     return createMorfologikDictionary(dictData, dictInfo);
+    
   }
-
+  
 
   @Override
   protected void init(Dictionary ngramDictionary, TagDictionary posDictionary) {
@@ -85,9 +87,9 @@ public class MorfologikPOSTaggerFactory extends POSTaggerFactory {
       if (artifactProvider != null) {
         Object obj = artifactProvider.getArtifact(MORFOLOGIK_POSDICT);
         if (obj != null) {
-          byte[] data = artifactProvider
+          byte[] data = (byte[]) artifactProvider
               .getArtifact(MORFOLOGIK_POSDICT);
-          byte[] info = artifactProvider
+          byte[] info = (byte[]) artifactProvider
               .getArtifact(MORFOLOGIK_DICT_INFO);
 
           try {
@@ -119,7 +121,7 @@ public class MorfologikPOSTaggerFactory extends POSTaggerFactory {
 
   @Override
   public TagDictionary createTagDictionary(InputStream in)
-      throws IOException {
+      throws InvalidFormatException, IOException {
     throw new UnsupportedOperationException(
         "Morfologik POS Tagger factory does not support this operation");
   }
@@ -127,7 +129,8 @@ public class MorfologikPOSTaggerFactory extends POSTaggerFactory {
   @Override
   @SuppressWarnings("rawtypes")
   public Map<String, ArtifactSerializer> createArtifactSerializersMap() {
-    Map<String, ArtifactSerializer> serializers = super.createArtifactSerializersMap();
+    Map<String, ArtifactSerializer> serializers = super
+        .createArtifactSerializersMap();
 
     serializers.put(MORFOLOGIK_POSDICT_SUF, new ByteArraySerializer());
     serializers.put(MORFOLOGIK_DICT_INFO_SUF, new ByteArraySerializer());
@@ -153,7 +156,9 @@ public class MorfologikPOSTaggerFactory extends POSTaggerFactory {
 
   static class ByteArraySerializer implements ArtifactSerializer<byte[]> {
 
-    public byte[] create(InputStream in) throws IOException {
+    public byte[] create(InputStream in) throws IOException,
+        InvalidFormatException {
+
       return ModelUtil.read(in);
     }
 
